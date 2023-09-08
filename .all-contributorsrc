@@ -475,7 +475,9 @@
       "avatar_url": "https://avatars.githubusercontent.com/u/40770348?v=4",
       "profile": "https://github.com/nielsvanhooy",
       "contributions": [
-        "code"
+        "code",
+        "bug",
+        "test"
       ]
     },
     {
@@ -824,7 +826,8 @@
       "avatar_url": "https://avatars.githubusercontent.com/u/567181?v=4",
       "profile": "http://nilsso.github.io",
       "contributions": [
-        "code"
+        "code",
+        "bug"
       ]
     },
     {
@@ -1120,7 +1123,8 @@
       "avatar_url": "https://avatars.githubusercontent.com/u/1104190?v=4",
       "profile": "https://github.com/euri10",
       "contributions": [
-        "code"
+        "code",
+        "doc"
       ]
     },
     {
@@ -1186,6 +1190,64 @@
       "profile": "http://zanfar.com/",
       "contributions": [
         "doc"
+      ]
+    },
+    {
+      "login": "Mattwmaster58",
+      "name": "Mattwmaster58",
+      "avatar_url": "https://avatars.githubusercontent.com/u/26337069?v=4",
+      "profile": "https://github.com/Mattwmaster58",
+      "contributions": [
+        "bug",
+        "code",
+        "test"
+      ]
+    },
+    {
+      "login": "aorith",
+      "name": "Manuel Sanchez Pinar",
+      "avatar_url": "https://avatars.githubusercontent.com/u/5411704?v=4",
+      "profile": "https://es.linkedin.com/in/manusp",
+      "contributions": [
+        "doc"
+      ]
+    },
+    {
+      "login": "juan-riveros",
+      "name": "Juan Riveros",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1297567?v=4",
+      "profile": "https://github.com/juan-riveros",
+      "contributions": [
+        "doc"
+      ]
+    },
+    {
+      "login": "davidbrochart",
+      "name": "David Brochart",
+      "avatar_url": "https://avatars.githubusercontent.com/u/4711805?v=4",
+      "profile": "https://github.com/davidbrochart",
+      "contributions": [
+        "doc"
+      ]
+    },
+    {
+      "login": "sean-donoghue",
+      "name": "Sean Donoghue",
+      "avatar_url": "https://avatars.githubusercontent.com/u/64597271?v=4",
+      "profile": "https://github.com/sean-donoghue",
+      "contributions": [
+        "doc"
+      ]
+    },
+    {
+      "login": "sykloid",
+      "name": "P.C. Shyamshankar",
+      "avatar_url": "https://avatars.githubusercontent.com/u/22753?v=4",
+      "profile": "https://sykloid.org/",
+      "contributions": [
+        "bug",
+        "code",
+        "test"
       ]
     }
   ],

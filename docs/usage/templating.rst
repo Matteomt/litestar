@@ -1,5 +1,5 @@
-Templates
-=========
+Templating
+==========
 
 Litestar has built-in support for both the `Jinja2 <https://jinja.palletsprojects.com/en/3.0.x/>`_
 and `Mako <https://www.makotemplates.org/>`_ template engines, as well as abstractions to
@@ -46,6 +46,30 @@ To register one of the built-in template engines you simply need to pass it to t
     The ``directory`` parameter passed to :class:`TemplateConfig <litestar.template.TemplateConfig>`
     can be either a directory or list of directories to use for loading templates.
 
+Registering a Custom Template Engine
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The above example will create a jinja Environment instance, but you can also pass in your own instance.
+
+.. code-block:: python
+
+
+    from litestar import Litestar
+    from litestar.contrib.jinja import JinjaTemplateEngine
+    from litestar.template import TemplateConfig
+    from jinja2 import Environment, DictLoader
+
+    my_custom_env = Environment(loader=DictLoader({"index.html": "Hello {{name}}!"}))
+    app = Litestar(
+        template_config=TemplateConfig(
+            instance=JinjaTemplateEngine.from_environment(my_custom_env)
+        )
+    )
+
+.. note::
+
+    The ``instance`` parameter passed to :class:`TemplateConfig <litestar.template.TemplateConfig>`
+    can not be used in conjunction with the ``directory`` parameter, if you choose to use instance you're fully responsible on the engine creation.
 
 Defining a custom template engine
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -131,7 +155,7 @@ Accessing the request instance
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The current :class:`Request <litestar.connection.request.Request>` is available within the
-template context under ``request``, which also provides access to the :doc:`app instance </usage/the-litestar-app>`.
+template context under ``request``, which also provides access to the :doc:`app instance </usage/applications>`.
 
 Accessing ``app.state.key`` for example would look like this:
 <strong>check_context_key: </strong>{{ check_context_key() }}
@@ -250,7 +274,7 @@ Built-in callables
 ``url_for``
     To access urls for route handlers you can use the ``url_for`` function. Its signature and behaviour
     matches :meth:`route_reverse <litestar.app.Litestar.route_reverse>` behaviour. More details about route handler indexing
-    can be found :ref:`here <usage/route-handlers:route handler indexing>`.
+    can be found :ref:`here <usage/routing/handlers:route handler indexing>`.
 
 ``csrf_token``
     This function returns the request's unique :ref:`CSRF token <usage/middleware/builtin-middleware:csrf>` You can use this

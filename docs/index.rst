@@ -35,25 +35,25 @@ Installation
     :ref:`Cookie Based Sessions <usage/middleware/builtin-middleware:client-side sessions>`
         :code:`pip install litestar[cryptography]`
 
-    :doc:`JWT Security Backends </usage/contrib/jwt>`
+    :doc:`JWT </usage/security/jwt>`
         :code:`pip install litestar[jwt]`
 
     :doc:`RedisStore </usage/stores>`
         :code:`pip install litestar[redis]`
 
-    :ref:`Picologging <usage/the-litestar-app:using picologging>`
+    :ref:`Picologging <usage/logging:using picologging>`
         :code:`pip install litestar[picologging]`
 
-    :ref:`StructLog <usage/the-litestar-app:using structlog>`
+    :ref:`StructLog <usage/logging:using structlog>`
         :code:`pip install litestar[structlog]`
 
-    :doc:`Prometheus Instrumentation </usage/contrib/prometheus>`
+    :doc:`Prometheus Instrumentation </usage/metrics/prometheus>`
         :code:`pip install litestar[prometheus]`
 
-    :doc:`Open Telemetry Instrumentation </usage/contrib/open-telemetry>`
+    :doc:`Open Telemetry Instrumentation </usage/metrics/open-telemetry>`
         :code:`pip install litestar[opentelemetry]`
 
-    :doc:`SQLAlchemy </usage/contrib/sqlalchemy/index>`
+    :doc:`SQLAlchemy </usage/databases/sqlalchemy/index>`
         :code:`pip install litestar[sqlalchemy]`
 
     :doc:`CLI </usage/cli>`
@@ -71,7 +71,7 @@ Installation
     All Extras:
         :code:`pip install litestar[full]`
 
-    .. note:: the full extras is not recommended because it will add a lot of unnecessary extras.
+    .. note:: The full extras is not recommended because it will add a lot of unnecessary extras.
 
 
 Minimal Example
@@ -191,7 +191,7 @@ You can also use dataclasses (standard library and Pydantic),
             ...
 
         @patch(path="/{user_id:uuid}", dto=PartialUserDTO)
-        async def partial_update_user(self, user_id: UUID4, data: PartialUserDTO) -> User:
+        async def partial_update_user(self, user_id: UUID4, data: DTOData[User]) -> User:
             ...
 
         @put(path="/{user_id:uuid}")
@@ -286,6 +286,8 @@ Example Applications
 * `litestar-pg-redis-docker <https://github.com/litestar-org/starlite-pg-redis-docker>`_ : In addition to Litestar, this
   demonstrates a pattern of application modularity, SQLAlchemy 2.0 ORM, Redis cache connectivity, and more. Like all
   Litestar projects, this application is open to contributions, big and small.
+* `litestar-fullstack <https://github.com/litestar-org/litestar-fullstack>`_ : A reference application that contains most of the boilerplate required for a web application.
+It features a Litestar app configured with best practices, SQLAlchemy 2.0 and SAQ, a frontend integrated with Vitejs and Jinja2 templates. Docker, and more
 * `litestar-hello-world <https://github.com/litestar-org/litestar-hello-world>`_: A bare-minimum application setup. Great
   for testing and POC work.
 

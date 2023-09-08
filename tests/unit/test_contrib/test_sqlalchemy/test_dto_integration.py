@@ -3,14 +3,26 @@ from types import ModuleType
 from typing import Any, Callable, Dict, List, Tuple
 
 import pytest
-from sqlalchemy import ForeignKey, String
-from sqlalchemy.orm import DeclarativeBase, Mapped, declared_attr, mapped_column, relationship
+from sqlalchemy import Column, ForeignKey, Integer, String, Table
+from sqlalchemy.ext.hybrid import hybrid_property
+from sqlalchemy.orm import (
+    DeclarativeBase,
+    Mapped,
+    column_property,
+    composite,
+    declared_attr,
+    mapped_column,
+    relationship,
+)
 from typing_extensions import Annotated
 
 from litestar import get, post
 from litestar.contrib.sqlalchemy.dto import SQLAlchemyDTO
-from litestar.dto import DTOConfig
+from litestar.di import Provide
+from litestar.dto import DTOConfig, DTOField, Mark
 from litestar.dto._backend import _rename_field
+from litestar.dto.config import SQLAlchemyDTOConfig
+from litestar.dto.field import DTO_FIELD_META_KEY
 from litestar.dto.types import RenameStrategy
 from litestar.testing import create_test_client
 
@@ -278,8 +290,6 @@ def get_handler() -> Interval:
 
 
 def test_dto_with_hybrid_property_setter(create_module: Callable[[str], ModuleType]) -> None:
-    SQLAlchemyDTO._dto_backends = {}
-
     module = create_module(
         """
 from __future__ import annotations
@@ -330,6 +340,121 @@ def get_handler(data: Circle) -> Circle:
         assert module.DIAMETER == 10
 
 
+async def test_dto_with_composite_map() -> None:
+    @dataclass
+    class Point:
+        x: int
+        y: int
+
+    class Vertex1(Base):
+        start: Mapped[Point] = composite(mapped_column("x1"), mapped_column("y1"))
+        end: Mapped[Point] = composite(mapped_column("x2"), mapped_column("y2"))
+
+    dto = SQLAlchemyDTO[Vertex1]
+
+    @post(dto=dto, signature_namespace={"Vertex": Vertex1})
+    def post_handler(data: Vertex1) -> Vertex1:
+        return data
+
+    with create_test_client(route_handlers=[post_handler]) as client:
+        response = client.post(
+            "/",
+            json={
+                "id": "1",
+                "start": {"x": 10, "y": 20},
+                "end": {"x": 1, "y": 2},
+            },
+        )
+        assert response.json() == {
+            "id": "1",
+            "start": {"x": 10, "y": 20},
+            "end": {"x": 1, "y": 2},
+        }
+
+
+async def test_dto_with_composite_map_using_explicit_columns() -> None:
+    @dataclass
+    class Point:
+        x: int
+        y: int
+
+    class Vertex2(Base):
+        x1: Mapped[int]
+        y1: Mapped[int]
+        x2: Mapped[int]
+        y2: Mapped[int]
+
+        start: Mapped[Point] = composite("x1", "y1")
+        end: Mapped[Point] = composite("x2", "y2")
+
+    dto = SQLAlchemyDTO[Vertex2]
+
+    @post(dto=dto, signature_namespace={"Vertex": Vertex2})
+    def post_handler(data: Vertex2) -> Vertex2:
+        return data
+
+    with create_test_client(route_handlers=[post_handler]) as client:
+        response = client.post(
+            "/",
+            json={
+                "id": "1",
+                "start": {"x": 10, "y": 20},
+                "end": {"x": 1, "y": 2},
+            },
+        )
+        assert response.json() == {
+            "id": "1",
+            "start": {"x": 10, "y": 20},
+            "end": {"x": 1, "y": 2},
+        }
+
+
+async def test_dto_with_composite_map_using_hybrid_imperative_mapping() -> None:
+    @dataclass
+    class Point:
+        x: int
+        y: int
+
+    table = Table(
+        "vertices2",
+        Base.metadata,
+        Column("id", String, primary_key=True),
+        Column("x1", Integer),
+        Column("y1", Integer),
+        Column("x2", Integer),
+        Column("y2", Integer),
+    )
+
+    class Vertex3(Base):
+        __table__ = table
+
+        id: Mapped[str]
+
+        start = composite(Point, table.c.x1, table.c.y1)
+        end = composite(Point, table.c.x2, table.c.y2)
+
+    dto = SQLAlchemyDTO[Vertex3]
+
+    @post(dto=dto, signature_namespace={"Vertex": Vertex3})
+    def post_handler(data: Vertex3) -> Vertex3:
+        return data
+
+    with create_test_client(route_handlers=[post_handler]) as client:
+        response = client.post(
+            "/",
+            json={
+                "id": "1",
+                "start": {"x": 10, "y": 20},
+                "end": {"x": 1, "y": 2},
+            },
+        )
+        assert response.json() == {
+            "id": "1",
+            "start": {"x": 10, "y": 20},
+            "end": {"x": 1, "y": 2},
+        }
+
+
 async def test_field_with_sequence_default(create_module: Callable[[str], ModuleType]) -> None:
     module = create_module(
         """
@@ -368,5 +493,139 @@ def post_handler(data: Model) -> Model:
     """
     )
     with create_test_client(route_handlers=[module.post_handler]) as client:
-        response = client.post("/", json={"val": "value"})
+        response = client.post("/", json={"id": 1, "val": "value"})
         assert response.json() == {"id": 1, "val": "value"}
+
+
+async def test_disable_implicitly_mapped_columns_using_annotated_notation() -> None:
+    class Base(DeclarativeBase):
+        id: Mapped[int] = mapped_column(default=int, primary_key=True)
+
+    table = Table(
+        "vertices2",
+        Base.metadata,
+        Column("id", Integer, primary_key=True),
+        Column("field", String, nullable=True),
+    )
+
+    class Model(Base):
+        __table__ = table
+        id: Mapped[int]
+
+        @hybrid_property
+        def id_multiplied(self) -> int:
+            return self.id * 10
+
+    dto_type = SQLAlchemyDTO[Annotated[Model, SQLAlchemyDTOConfig(include_implicit_fields=False)]]
+
+    @get(
+        dto=None,
+        return_dto=dto_type,
+        signature_namespace={"Model": Model},
+        dependencies={"model": Provide(lambda: Model(id=123, field="hi"), sync_to_thread=False)},
+    )
+    def post_handler(model: Model) -> Model:
+        return model
+
+    with create_test_client(route_handlers=[post_handler]) as client:
+        response = client.get(
+            "/",
+        )
+
+        json = response.json()
+        assert json.get("field") is None
+        assert json.get("id_multiplied") is None
+
+
+async def test_disable_implicitly_mapped_columns_special() -> None:
+    class Base(DeclarativeBase):
+        id: Mapped[int] = mapped_column(default=int, primary_key=True)
+
+    table = Table(
+        "vertices2",
+        Base.metadata,
+        Column("id", Integer, primary_key=True),
+        Column("field", String, nullable=True),
+    )
+
+    class Model(Base):
+        __table__ = table
+        id: Mapped[int]
+
+    class dto_type(SQLAlchemyDTO[Model]):
+        config = SQLAlchemyDTOConfig(include_implicit_fields=False)
+
+    @get(
+        dto=None,
+        return_dto=dto_type,
+        signature_namespace={"Model": Model},
+        dependencies={"model": Provide(lambda: Model(id=123, field="hi"), sync_to_thread=False)},
+    )
+    def post_handler(model: Model) -> Model:
+        return model
+
+    with create_test_client(route_handlers=[post_handler]) as client:
+        response = client.get(
+            "/",
+        )
+
+        json = response.json()
+        assert json.get("field") is None
+
+
+async def test_disable_implicitly_mapped_columns_with_hybrid_properties_and_Mark_overrides() -> None:
+    class Base(DeclarativeBase):
+        id: Mapped[int] = mapped_column(default=int, primary_key=True)
+
+    table = Table(
+        "vertices2",
+        Base.metadata,
+        Column("id", Integer, primary_key=True),
+        Column("field", String, nullable=True),
+        Column("field2", String),
+        Column("field3", String),
+        Column("field4", String),
+    )
+
+    class Model(Base):
+        __table__ = table
+        id: Mapped[int]
+        field2 = column_property(table.c.field2, info={DTO_FIELD_META_KEY: DTOField(mark=Mark.READ_ONLY)})  # type: ignore
+        field3 = column_property(table.c.field3, info={DTO_FIELD_META_KEY: DTOField(mark=Mark.WRITE_ONLY)})  # type: ignore
+        field4 = column_property(table.c.field4, info={DTO_FIELD_META_KEY: DTOField(mark=Mark.PRIVATE)})  # type: ignore
+
+        @hybrid_property
+        def id_multiplied(self) -> int:
+            return self.id * 10
+
+    dto_type = SQLAlchemyDTO[
+        Annotated[
+            Model,
+            SQLAlchemyDTOConfig(include_implicit_fields="hybrid-only"),
+        ]
+    ]
+
+    @get(
+        dto=None,
+        return_dto=dto_type,
+        signature_namespace={"Model": Model},
+        dependencies={
+            "model": Provide(
+                lambda: Model(id=12, field="hi", field2="bye2", field3="bye3", field4="bye4"), sync_to_thread=False
+            )
+        },
+    )
+    def post_handler(model: Model) -> Model:
+        return model
+
+    with create_test_client(route_handlers=[post_handler]) as client:
+        response = client.get(
+            "/",
+        )
+
+        json = response.json()
+        assert json.get("id_multiplied") == 120
+        assert json.get("field") is None
+        assert json.get("field2") is not None
+        assert json.get("field3") is not None
+        assert json.get("field4") is None
